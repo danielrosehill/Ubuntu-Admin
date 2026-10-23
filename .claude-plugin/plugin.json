@@ -1,0 +1,29 @@
+{
+  "name": "ubuntu-admin",
+  "version": "1.0.0",
+  "description": "Agent skills for administering Ubuntu machines, desktop or server, locally or over SSH: health and diagnosis, apt/snap/flatpak packages and updates, systemd services and logs, Docker, storage and backups, networking (netplan/NetworkManager), hardware, desktop odds and ends, and shell config. Consolidates linux-desktop-mgmt, linux-server-mgmt and sysadmin-homelab.",
+  "author": {
+    "name": "Daniel Rosehill",
+    "url": "https://github.com/danielrosehill"
+  },
+  "repository": "https://github.com/danielrosehill/Ubuntu-Admin",
+  "license": "MIT",
+  "keywords": [
+    "ubuntu",
+    "linux",
+    "sysadmin",
+    "homelab",
+    "server",
+    "desktop",
+    "ssh",
+    "apt",
+    "snap",
+    "flatpak",
+    "systemd",
+    "docker",
+    "netplan",
+    "networkmanager",
+    "storage",
+    "agent-skills"
+  ]
+}
