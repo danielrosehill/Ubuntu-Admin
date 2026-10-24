@@ -74,4 +74,4 @@ journalctl -u systemd-oomd --since "1 hour ago" --no-pager 2>/dev/null | tail
 
 ## Related
 
-`system-status`, `system-diagnose`, `services-manage` (resource limits), `docker-health`. The `linux-system-optimisation` plugin covers benchmarks and tuning. The `linux-debugging` plugin covers OOM history and oomd/earlyoom setup.
+`performance-audit` (periodic spot check), `system-status`, `system-diagnose`, `services-manage` (resource limits), `docker-health`. The `linux-system-optimisation` plugin covers benchmarks and tuning. The `linux-debugging` plugin covers OOM history and oomd/earlyoom setup.

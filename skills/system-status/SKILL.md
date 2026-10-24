@@ -122,4 +122,5 @@ Do not paste the whole raw output back; quote the lines that matter.
 
 - `system-diagnose` — when something is wrong right now.
 - `system-resources` — slowdown, memory pressure, runaway processes.
+- `performance-audit` — repeatable resource spot check with a per-host trend log.
 - `services-check`, `docker-health`, `storage-drive-health` — drill-downs.

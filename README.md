@@ -5,7 +5,7 @@
 
 Agent skills for administering **Ubuntu machines, desktop or server, on the local machine or over SSH**.
 
-Plugin name: `ubuntu-admin`. It has 45 skills, 2 agents and 2 helper scripts.
+Plugin name: `ubuntu-admin`. It has 46 skills, 2 agents and 3 helper scripts.
 
 ## Purpose
 
@@ -28,9 +28,10 @@ One coherent toolkit for the everyday work of looking after Ubuntu boxes: checki
 
 ### Scripts
 
-`scripts/` holds two read-only helpers that the skills call:
+`scripts/` holds three read-only helpers that the skills call:
 
 - `status-snapshot.sh` prints a Markdown health snapshot. It leaves out serials and machine IDs.
+- `perf-audit.sh` prints one JSON object of performance facts for `performance-audit`. Adds `vcgencmd` throttling flags on a Raspberry Pi.
 - `preflight.sh` prints a JSON description of the machine: release, desktop or server, desktop environment, network renderer, virtualization, sudo, tools.
 
 When `${CLAUDE_PLUGIN_ROOT}` is not set (for example, a skill read on its own outside an installed plugin), clone this repository and run them from there:
@@ -51,6 +52,7 @@ ssh <host> 'bash -s' < ~/Ubuntu-Admin/scripts/status-snapshot.sh  # remote
 | `system-status` | Read-only health snapshot: load, memory, disks, failed units, errors, updates, reboot flag, Docker. |
 | `system-diagnose` | Triage of a live problem from fresh journal, kernel, unit, OOM and coredump evidence. |
 | `system-resources` | Slowdowns, memory pressure, swap, runaway, zombie and I/O-blocked processes; live monitoring. |
+| `performance-audit` | Repeatable spot check: load, PSI, active swapping, OOM kills, disks, containers at their limits, temperatures; ranked report and a per-host trend log. Reuses the saved hardware profile. |
 | `system-config-edit` | Back up, edit, validate (`sshd -t`, `netplan try`, `visudo -c` and others), reload, roll back. |
 | `system-change-log` | Dated problem, cause, fix and reverse record of a change, with optional git commit. |
 | `system-virtualization` | KVM/libvirt host readiness, nested virtualization and IOMMU; guest detection and agents. |
@@ -110,7 +112,7 @@ ssh <host> 'bash -s' < ~/Ubuntu-Admin/scripts/status-snapshot.sh  # remote
 
 | Skill | What it does |
 | --- | --- |
-| `hardware-profile` | AI- and human-readable hardware profile (CPU, RAM, board, storage, GPU, NICs), hw-probe, compatibility checks. |
+| `hardware-profile` | AI- and human-readable hardware profile (CPU, RAM, board, storage, GPU, NICs), saved once per host under `$CLAUDE_USER_DATA/host-profiles/`; hw-probe, compatibility checks. |
 | `hardware-gpu` | GPU driver state, `ubuntu-drivers`, NVIDIA, AMD/ROCm, Intel, Secure Boot/MOK, ML readiness, passthrough. |
 | `hardware-usb-input` | USB device tree, hot-plug events, autosuspend, scancodes (evtest), key remapping. |
 | `hardware-power` | Suspend and hibernate, wake sources, lid and idle behaviour, power profiles, Wake-on-LAN. |

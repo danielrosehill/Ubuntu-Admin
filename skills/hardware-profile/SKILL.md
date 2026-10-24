@@ -59,7 +59,9 @@ sudo -E hw-probe -all -save ./hw-probe-$(date +%Y%m%d)
 
 ## 5. Save the profile
 
-Write `hardware-profile-<hostname>-<YYYY-MM-DD>.md` (in the current workspace or a path the user names) with sections: Identity, CPU, Memory (slots used/free, max supported), Storage, GPU, Network, Peripherals, Firmware, Sensors, Notes. Put a fenced JSON block at the top with the key facts (cpu_model, cores, threads, ram_total_gb, ram_slots_free, gpu, disks[], nics[]) for agents.
+Default location: `${CLAUDE_USER_DATA:-$HOME/.claude-user-data}/host-profiles/<hostname>.md` (short `hostname`, lowercased), or a path the user names. One file per host, **overwritten in place** on re-profile; if the directory is a git repository, commit and push, and history keeps the old versions. Never write profiles into this plugin's repo.
+
+Sections: Identity, CPU, Memory (slots used/free, max supported), Storage, GPU, Network, Peripherals, Firmware, Sensors, Notes. Put a fenced JSON block at the top with the key facts for agents: `hostname`, `profiled` (YYYY-MM-DD), `kernel`, `os`, `cpu_model`, `cores`, `threads`, `ram_total_gb`, `ram_slots_free`, `gpu`, `disks[]`, `nics[]`. `performance-audit` reads that block to skip re-profiling, so keep the field names. Use Notes for facts an audit should know (role, what runs there, VMs with pinned RAM, swap on slow media).
 
 ## 6. Compatibility check
 
@@ -88,4 +90,5 @@ The saved file path, plus a 5–10 line summary (model, CPU, RAM used/free slots
 
 - `hardware-gpu`, `hardware-usb-input`, `storage-drive-health` — component detail.
 - `system-status` — runtime health rather than inventory.
+- `performance-audit` — reads this profile on every audit.
 - `linux-system-optimisation` plugin — benchmarks.
