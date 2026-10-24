@@ -11,6 +11,9 @@
 
 set -u
 export LC_ALL=C
+# The whole body is one function, so `ssh <host> 'bash -s' < perf-audit.sh` parses it all
+# before running: otherwise a command that reads stdin swallows the rest of the script.
+main() {
 have() { command -v "$1" >/dev/null 2>&1; }
 SUDO=""; sudo -n true 2>/dev/null && SUDO="sudo -n"
 py=python3; have $py || { echo '{"error":"python3 missing"}'; exit 1; }
@@ -25,16 +28,18 @@ cat /proc/uptime > "$T/uptime"
 for r in cpu memory io; do [ -r /proc/pressure/$r ] && sed "s/^/$r /" /proc/pressure/$r; done > "$T/psi"
 cat /proc/meminfo > "$T/meminfo"
 vmstat 1 6 | tail -5 > "$T/vmstat"
-swapon --show=NAME,TYPE,SIZE,USED --bytes --noheadings 2>/dev/null > "$T/swap"
-df -P -B1 -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | tail -n +2 > "$T/df"
-df -P -i -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | tail -n +2 > "$T/dfi"
-ps -eo pid,%cpu,%mem,rss,comm --sort=-%cpu | sed -n 2,9p > "$T/ps_cpu"
+tail -n +2 /proc/swaps > "$T/swap"   # not swapon: /sbin is often off PATH in non-login shells
+# Target last: sources and mount points may contain spaces.
+df -B1 --output=size,pcent,ipcent,target -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs -x fuse.rclone -x fuse.portal -x fuse.gvfsd-fuse 2>/dev/null | tail -n +2 > "$T/df"
+ps -eo pid,%cpu,%mem,rss,comm --sort=-%cpu | awk 'NR>1 && $5!="ps"' | head -8 > "$T/ps_cpu"
 ps -eo pid,%cpu,%mem,rss,comm --sort=-rss  | sed -n 2,9p > "$T/ps_mem"
 $SUDO journalctl -k --since "-7 days" --no-pager 2>/dev/null | grep -ciE 'out of memory|oom-kill|killed process' > "$T/oom" || true
 journalctl -u systemd-oomd --since "-7 days" --no-pager 2>/dev/null | grep -ci 'killed' > "$T/oomd" || true
 systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' > "$T/failed"
 grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //' > "$T/cpumodel"
 [ -r /proc/device-tree/model ] && tr -d '\0' < /proc/device-tree/model > "$T/dtmodel"
+findmnt -n -o SOURCE / > "$T/rootdev" 2>/dev/null
+$SUDO journalctl -k --since "-7 days" --no-pager 2>/dev/null | grep -ciE 'I/O error|mmc[0-9].*(error|timeout)|EXT4-fs error|blk_update_request' > "$T/ioerr" || true
 lsblk -d -n -o NAME,SIZE,ROTA,TRAN,MODEL 2>/dev/null | grep -vE '^(loop|zram|ram)' > "$T/disks"
 if have sensors; then sensors -j 2>/dev/null > "$T/sensors"; fi
 for z in /sys/class/thermal/thermal_zone*/temp; do [ -r "$z" ] && cat "$z"; done > "$T/thermal" 2>/dev/null
@@ -48,7 +53,7 @@ fi
 # Is anything keeping history? (so the report can say whether "what happened at 3am" is answerable)
 { have docker && docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null
   systemctl list-units --type=service --no-legend --plain 2>/dev/null | awk '{print $1}'
-} | grep -ioE 'beszel[^ ]*|netdata|node[-_]exporter|prometheus|telegraf|glances|sysstat|collectd|zabbix[^ ]*' | sort -u > "$T/monitors"
+} | grep -ioE 'beszel[-_a-z]*|netdata|node[-_]exporter|prometheus|telegraf|glances|sysstat|collectd|zabbix[-_a-z]*' | sort -u > "$T/monitors"
 
 $py -I - "$T" <<'PY'
 import json, os, sys, re
@@ -89,17 +94,22 @@ if vm:
     out["vmstat_5s"] = {"runnable": avg(0), "blocked": avg(1), "swap_in_kbps": avg(6),
                         "swap_out_kbps": avg(7), "cpu_user": avg(12), "cpu_sys": avg(13),
                         "cpu_idle": avg(14), "io_wait": avg(15)}
-out["swap_devices"] = [dict(zip(["name", "type", "size", "used"], l.split())) for l in lines("swap")]
+out["swap_devices"] = [{"name": f[0], "type": f[1], "size_gb": round(int(f[2]) / 1048576, 2),
+                        "used_gb": round(int(f[3]) / 1048576, 2)} for f in (l.split() for l in lines("swap"))]
 
 fs = []
-inodes = {l.split()[5]: l.split()[4] for l in lines("dfi") if len(l.split()) >= 6}
 for l in lines("df"):
-    f = l.split()
-    if len(f) < 6 or f[5].startswith(("/tmp/.mount_", "/snap/")): continue  # AppImage/snap mounts are always 100%
-    fs.append({"mount": f[5], "size_gb": round(int(f[1]) / 1e9, 1), "used_pct": int(f[4].rstrip("%")),
-               "inodes_used_pct": int(inodes.get(f[5], "0%").rstrip("%-") or 0)})
+    f = l.split(None, 3)
+    if len(f) < 4 or f[3].startswith(("/tmp/.mount_", "/snap/")): continue  # AppImage/snap mounts are always 100%
+    pct = lambda x: int(x.rstrip("%")) if x.rstrip("%").isdigit() else None
+    fs.append({"mount": f[3], "size_gb": round(int(f[0]) / 1e9, 1), "used_pct": pct(f[1]), "inodes_used_pct": pct(f[2])})
 out["filesystems"] = fs
 out["disks"] = lines("disks")
+out["root_device"] = rd("rootdev") or None
+out["storage_errors_7d"] = int(rd("ioerr")) if rd("ioerr") else None   # kernel I/O / mmc / ext4 errors
+# Swap on an SD card wears it out and is slow: flag it (zram is fine).
+out["swap_on_sd"] = any(d["name"].startswith("/dev/mmcblk") or (d["type"] == "file" and (out["root_device"] or "").startswith("/dev/mmcblk"))
+                        for d in out["swap_devices"])
 
 ps = lambda n: [dict(zip(["pid", "cpu_pct", "mem_pct", "rss_kb", "comm"], l.split(None, 4))) for l in lines(n)]
 out["top_cpu"], out["top_mem"] = ps("ps_cpu"), ps("ps_mem")
@@ -144,3 +154,5 @@ if rd("dinspect"):
 out["history_monitoring"] = lines("monitors")
 print(json.dumps(out, indent=1))
 PY
+}
+main "$@" </dev/null
