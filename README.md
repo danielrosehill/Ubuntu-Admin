@@ -3,6 +3,8 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Ubuntu 22.04 | 24.04 | 26.04](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04%20%7C%2026.04-E95420)
 
+**Write-up:** [Claude Code plugins for non-coding work: homelab, data, media and admin](https://blog.danielrosehill.com/posts/claude-code-plugins-non-coding-workflows-xlkdop/)
+
 Agent skills for administering **Ubuntu machines, desktop or server, on the local machine or over SSH**.
 
 Plugin name: `ubuntu-admin`. It has 46 skills, 2 agents and 3 helper scripts.
