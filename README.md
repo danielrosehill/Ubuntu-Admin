@@ -261,3 +261,7 @@ Point your agent at this repository's `skills/` folder, or install it from a mar
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Folded in
+
+- `desktop-manager`, retired 2026-11-05. Mapping: check-system to system-status; inspect-service to services-check; install-package and remove-package to packages-install; review-logs to services-logs; troubleshoot-hardware to system-diagnose; update-system to packages-updates; apply-config to system-config-edit; onboard and update-profile to hardware-profile. Its distro-agnostic text is archived in `earlier/Claude-Desktop-Manager-Plugin/` and is not loaded.
